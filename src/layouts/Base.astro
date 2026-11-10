@@ -1,0 +1,62 @@
+---
+import '../styles/tokens.css';
+import { SITE_NAME, PREVIEW } from '../lib/site';
+interface Props { title: string; description: string; jsonLd?: object; noindex?: boolean }
+const { title, description, jsonLd, noindex = false } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const hide = noindex || PREVIEW;
+const ogImage = new URL('/og.png', Astro.site);
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {hide ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={ogImage} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@600&family=Public+Sans:wght@400;600&display=swap" />
+    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+  </head>
+  <body>
+    {PREVIEW && <div class="preview-banner">Preview build. This site is hidden from search engines.</div>}
+    <header class="site-header">
+      <div class="wrap header-row">
+        <a class="brand" href="/">
+          <img src="/favicon.svg" alt="" width="28" height="28" />
+          <span>{SITE_NAME}</span>
+        </a>
+        <nav aria-label="Main">
+          <a href="/furnace-age/">Furnace</a>
+          <a href="/air-conditioner-age/">AC</a>
+          <a href="/water-heater-age/">Water heater</a>
+          <a href="/brands/">All brands</a>
+        </nav>
+      </div>
+    </header>
+    <main class="wrap">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="wrap footer-row">
+        <p class="small">Dates are decoded from each maker's serial number format and are estimates; a date printed on the label always wins. Not affiliated with any manufacturer. As an Amazon Associate we earn from qualifying purchases.</p>
+        <nav aria-label="Footer">
+          <a href="/about/">About</a>
+          <a href="/sources/">Sources and testing</a>
+          <a href="/privacy/">Privacy</a>
+          <a href="/contact/">Contact</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,18 @@
+---
+import Base from '../../layouts/Base.astro';
+import { BRANDS, FAMILY_NAMES } from '../../lib/brands';
+const fams = [...new Set(BRANDS.map((b) => b.family))];
+---
+<Base title="Who Makes What: HVAC and Water Heater Brands and Their Parent Companies" description="Which company makes Bryant, Payne, Luxaire, Janitrol, State, Reliance and other furnace, AC and water heater brands, and which ones share a serial number code.">
+  <section>
+    <p class="crumbs"><a href="/">Home</a> › Who makes what</p>
+    <h1>Who makes what</h1>
+    <p class="lede">The name on the cabinet is often a brand of a bigger company. Brands from the same factory almost always share a serial number code, so if your brand isn't listed, check whether its parent company is.</p>
+  </section>
+  {fams.map((f) => (
+    <section>
+      <h2>{FAMILY_NAMES[f]}</h2>
+      <ul>{BRANDS.filter((b) => b.family === f).map((b) => <li><a href={`/${b.slug}/`}>{b.name}</a> ({b.group === 'water' ? 'water heaters' : 'heating and cooling'})</li>)}</ul>
+    </section>
+  ))}
+</Base>

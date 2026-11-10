@@ -1,0 +1,12 @@
+---
+import { EQUIP, type Equip } from '../lib/equipment';
+import { amazonUrl } from '../lib/site';
+interface Props { equip: Equip }
+const E = EQUIP[Astro.props.equip];
+---
+<section>
+  <h2>Keeping an older {E.name} going</h2>
+  <ul class="shop">
+    {E.amazon.map((a) => <li><a href={amazonUrl(a.q)} rel="sponsored nofollow noopener" target="_blank">{a.q[0].toUpperCase() + a.q.slice(1)}</a>: <span class="muted">{a.why}</span></li>)}
+  </ul>
+</section>

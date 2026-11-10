@@ -1,0 +1,28 @@
+---
+import Base from '../../layouts/Base.astro';
+import { BRANDS, brandEquipPath } from '../../lib/brands';
+import { EQUIP } from '../../lib/equipment';
+const groups = [['Furnaces, air conditioners and heat pumps', 'hvac'], ['Water heaters', 'water']] as const;
+const label = { verified: 'Tested against official records', checked: 'Sources agree', estimated: 'Estimate' };
+---
+<Base title="Serial Number Age Decoders by Brand: HVAC and Water Heaters" description="Every furnace, air conditioner, heat pump and water heater brand we decode, who makes it, and how well each code has been tested.">
+  <section>
+    <p class="crumbs"><a href="/">Home</a> › Brands</p>
+    <h1>All brands</h1>
+    <p class="lede">Pick the name printed on your unit. Brands made by the same company share a code.</p>
+  </section>
+  {groups.map(([title, g]) => (
+    <section>
+      <h2>{title}</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Brand</th><th>Made by</th><th>Pages</th><th>Testing</th></tr></thead>
+        <tbody>{BRANDS.filter((b) => b.group === g).map((b) => (
+          <tr><td><a href={`/${b.slug}/`}><b>{b.name}</b></a></td><td>{b.maker}</td>
+          <td class="small">{b.pages.length ? b.pages.map((e, i) => <>{i > 0 && ', '}<a href={brandEquipPath(b, e)}>{EQUIP[e].name}</a></>) : '-'}</td>
+          <td class="small">{label[b.status]}</td></tr>
+        ))}</tbody>
+      </table></div>
+    </section>
+  ))}
+  <p class="small muted">Missing your brand? <a href="/contact/">Tell us</a>, ideally with a serial number and the date printed on the label.</p>
+</Base>

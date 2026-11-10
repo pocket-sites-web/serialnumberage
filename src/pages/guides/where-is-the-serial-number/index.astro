@@ -1,0 +1,25 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Plate from '../../../components/Plate.astro';
+import { EQUIP } from '../../../lib/equipment';
+const order = ['furnace', 'air-conditioner', 'heat-pump', 'water-heater', 'tankless'] as const;
+---
+<Base title="Where Is the Serial Number on a Furnace, AC or Water Heater?" description="Where to find the data plate and serial number on a furnace, air conditioner, heat pump or water heater, and how to tell the serial number from the model number.">
+  <section>
+    <p class="crumbs"><a href="/">Home</a> › Guides › Finding the serial number</p>
+    <h1>Where is the serial number?</h1>
+    <p class="lede">Every furnace, air conditioner, heat pump and water heater has a data plate (also called a rating plate or nameplate) with a model number and a serial number. The serial number is the one that holds the date.</p>
+  </section>
+  <Plate serial="5898F06044" kind="data plate" caption="The model number describes the product; the serial number is unique to your unit and usually holds the date." />
+  {order.map((e) => <section><h2>On a {EQUIP[e].name}</h2><p>{EQUIP[e].where}</p></section>)}
+  <section>
+    <h2>Model number or serial number?</h2>
+    <ul>
+      <li>The <b>model number</b> is shared by every unit of that product. It usually describes capacity and features, for example a string ending in 060 or 036.</li>
+      <li>The <b>serial number</b> is unique to your unit. It is usually labelled "Serial No.", "S/N", "Ser. No." or "N° de série".</li>
+      <li>If the plate has a printed "Mfg. date" or "Date of manufacture", that's the answer, and you don't need to decode anything.</li>
+      <li>Can't read it? Take a photo with flash from an angle, then zoom in. Faded foil labels are often easier to read in the photo.</li>
+    </ul>
+    <p><a href="/">Decode your serial number</a></p>
+  </section>
+</Base>

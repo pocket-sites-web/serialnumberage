@@ -1,0 +1,47 @@
+---
+import Base from '../layouts/Base.astro';
+import Decoder from './Decoder.astro';
+import Plate from './Plate.astro';
+import Life from './Life.astro';
+import Shop from './Shop.astro';
+import { BRANDS, brandEquipPath } from '../lib/brands';
+import { EQUIP, type Equip } from '../lib/equipment';
+import { RULES } from '../lib/formats';
+interface Props { equip: Equip; intro: string; extra?: string }
+const { equip, intro, extra } = Astro.props;
+const E = EQUIP[equip];
+const Title = E.name.replace(/\b\w/g, (c) => c.toUpperCase());
+const list = BRANDS.filter((b) => b.equip.includes(equip) || (equip === 'water-heater' && b.equip.includes('tankless')));
+const faqs = [
+  { q: `How can I tell how old my ${E.name} is?`, a: `Every ${E.name} has a data plate with a serial number, and most makers hide the manufacture date inside it. Pick the brand and type the serial number into the decoder above. If the label prints a manufacture date, use that.` },
+  { q: `Where is the serial number on a ${E.name}?`, a: E.where },
+  { q: `How long does a ${E.name} last?`, a: `Typically ${E.lifeMin} to ${E.lifeMax} years.` },
+];
+const jsonLd = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) };
+const lennox = equip === 'water-heater' ? 'EF10718168' : RULES.lennox.formats[0].example;
+---
+<Base title={`${Title} Age by Serial Number: Decoder for Every Brand`} description={`How old is your ${E.name}? Pick the brand, type the serial number and get the month and year it was made, its age and how much life it has left.`} jsonLd={jsonLd}>
+  <section>
+    <p class="crumbs"><a href="/">Home</a> › {Title} age</p>
+    <h1>How Old Is My {Title}?</h1>
+    <p class="lede">{intro}</p>
+  </section>
+  <Decoder equip={equip === 'water-heater' ? 'water-heater' : equip} heading={`${Title} age decoder`} />
+  <section>
+    <h2>Find your brand</h2>
+    <ul class="link-grid">{list.map((b) => <li><a href={b.pages.includes(equip) ? brandEquipPath(b, equip) : `/${b.slug}/`}>{b.name}</a></li>)}</ul>
+    <p class="small muted">The brand on the cabinet is not always the company that made it. <a href="/who-makes-what/">Who makes what</a>.</p>
+  </section>
+  <section>
+    <h2>Where the serial number is</h2>
+    <Plate serial={lennox} kind={E.name} caption="Look for the line labelled Serial No., S/N or Ser. No." />
+    <p>{E.where}</p>
+  </section>
+  <Life equip={equip} />
+  {extra && <p class="note" set:html={extra} />}
+  <section class="faq">
+    <h2>Questions</h2>
+    {faqs.map((f) => <div><h3>{f.q}</h3><p>{f.a}</p></div>)}
+  </section>
+  <Shop equip={equip} />
+</Base>
