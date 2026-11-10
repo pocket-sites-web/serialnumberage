@@ -1,0 +1,65 @@
+---
+import Base from '../../layouts/Base.astro';
+import Decoder from '../../components/Decoder.astro';
+import Plate from '../../components/Plate.astro';
+import Formats from '../../components/Formats.astro';
+import Life from '../../components/Life.astro';
+import Shop from '../../components/Shop.astro';
+import { BRANDS, sisters, brandEquipPath, STATUS_TEXT, type Brand } from '../../lib/brands';
+import { EQUIP } from '../../lib/equipment';
+import { RULES } from '../../lib/formats';
+import { SITE_NAME, SITE_URL } from '../../lib/site';
+import type { RuleKey } from '../../lib/decoder';
+
+export function getStaticPaths() { return BRANDS.map((b) => ({ params: { brand: b.slug }, props: { b } })); }
+const { b } = Astro.props as { b: Brand };
+const rules = [...new Set(Object.values(b.rule))] as RuleKey[];
+const main = b.equip[0];
+const what = b.group === 'water' ? (main === 'tankless' ? 'Tankless Water Heater' : 'Water Heater') : 'Furnace or AC';
+const h1 = b.group === 'water' ? `${b.name} ${what} Age by Serial Number` : `${b.name} Serial Number: How Old Is My ${b.name} ${what}?`;
+const title = b.group === 'water' ? `${b.name} ${what} Age: Serial Number Decoder` : `${b.name} Serial Number Lookup: HVAC Age Decoder`;
+const sis = sisters(b);
+const firstRule = b.rule[main]!;
+const example = RULES[firstRule].formats[0].example;
+const faqs = [
+  { q: `How do I tell how old my ${b.name} ${EQUIP[main].name} is?`, a: `Find the serial number on the data plate and read it with the ${b.name} code: ${RULES[firstRule].summary} Or type it into the decoder on this page.` },
+  { q: 'Is the manufacture date printed on the label?', a: 'Often, yes, especially on newer units and water heaters. Look for "Mfg. date", "MFD" or "Date of manufacture". If there is a printed date, it is more reliable than decoding the serial number.' },
+  ...(RULES[firstRule].ambiguity ? [{ q: 'Why does my serial number give two possible dates?', a: RULES[firstRule].ambiguity! }] : []),
+  { q: `Who makes ${b.name}?`, a: `${b.name} is made by ${b.maker}.${sis.length ? ` The same serial code is used by ${sis.map((s) => s.name).join(', ')}.` : ''}` },
+];
+const jsonLd = [
+  { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
+  { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: SITE_NAME, item: `${SITE_URL}/` },
+    { '@type': 'ListItem', position: 2, name: 'Brands', item: `${SITE_URL}/brands/` },
+    { '@type': 'ListItem', position: 3, name: b.name, item: `${SITE_URL}/${b.slug}/` } ] },
+];
+---
+<Base title={title} description={`Find the age of a ${b.name} ${b.group === 'water' ? 'water heater' : 'furnace, air conditioner or heat pump'} from its serial number. Type it in for the month and year it was made, plus how much life it has left.`} jsonLd={jsonLd}>
+  <section>
+    <p class="crumbs"><a href="/">Home</a> › <a href="/brands/">Brands</a> › {b.name}</p>
+    <h1>{h1}</h1>
+    <p class="lede">{RULES[firstRule].summary} Type the serial number below for the exact month and year.</p>
+  </section>
+  <Decoder brand={b.slug} equip={main} heading={`Decode a ${b.name} serial number`} />
+  {b.note && <p class="note">{b.note}</p>}
+  <section>
+    <h2>About {b.name}</h2>
+    <p>{b.about}</p>
+    {sis.length > 0 && <p>Same serial code: {sis.map((s, i) => <>{i > 0 && ', '}<a href={`/${s.slug}/`}>{s.name}</a></>)}.</p>}
+    {b.pages.length > 0 && <p>By type: {b.pages.map((e, i) => <>{i > 0 && ' · '}<a href={brandEquipPath(b, e)}>{b.name} {EQUIP[e].name} age</a></>)}</p>}
+  </section>
+  <section>
+    <h2>Where to find the serial number</h2>
+    <Plate serial={example} kind={EQUIP[main].name} caption={`The serial number is usually labelled "Serial No." Example in the ${b.name} format.`} />
+    {b.equip.filter((e) => e !== 'heat-pump').map((e) => <p><b>{EQUIP[e].name[0].toUpperCase() + EQUIP[e].name.slice(1)}:</b> {EQUIP[e].where}</p>)}
+  </section>
+  {rules.map((r) => <Formats rule={r} name={rules.length > 1 ? `${b.name} ${r === 'rheemWh' ? 'water heater' : 'furnace and AC'}` : b.name} />)}
+  <Life equip={main} />
+  <section class="faq">
+    <h2>Questions</h2>
+    {faqs.map((f) => <div><h3>{f.q}</h3><p>{f.a}</p></div>)}
+  </section>
+  <p class="status"><b>How sure are these dates?</b> {STATUS_TEXT[b.status]} <a href="/sources/">How we test the decoder</a>.</p>
+  <Shop equip={main} />
+</Base>

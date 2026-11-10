@@ -1,0 +1,9 @@
+---
+import { EQUIP, type Equip } from '../lib/equipment';
+interface Props { equip: Equip }
+const E = EQUIP[Astro.props.equip];
+---
+<section>
+  <h2>How long does a {E.name} last?</h2>
+  <p>Most {E.plural} last <b>{E.lifeMin} to {E.lifeMax} years</b>. Yearly servicing, the local climate and how hard it works all move it within that range. Past {E.lifeMin} years, it is worth getting a replacement price before the unit fails, so you aren't forced into a rushed decision.</p>
+</section>

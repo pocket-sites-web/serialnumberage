@@ -1,0 +1,54 @@
+---
+import Base from '../../layouts/Base.astro';
+import { BRANDS, STATUS_TEXT } from '../../lib/brands';
+const recalls = [
+  ['A.O. Smith, State, Reliance (gas water heaters)', 'CPSC recall 06-002, 2005', 'serial prefixes by month, January 2004 to July 2005'],
+  ['A.O. Smith family (Ultra-Low NOx water heaters)', 'CPSC recall 19-029, 2018', 'first four digits 1115 to 1631 = April 2011 to August 2016'],
+  ['York, Luxaire, Coleman (gas furnaces)', 'CPSC recall 01-523, 2001', 'WFKM and WGKM serials made May to July 2001'],
+  ['Amana (packaged terminal units)', 'CPSC recall 04-229, 2004', 'serials starting 0301 to 0303 = January to March 2003'],
+  ['Rheem (electric water heaters)', 'CPSC recall 16-177, 2016', 'A0114 to A5214 = 2014, A1015 to A1615 = March to April 2015'],
+  ['Goodman, Trane, American Standard, State, American, Bradford White, Lennox', 'CPSC recalls 17-145, 17-103, 14-263, 17-709, 08-241, 02-020, 02-553, 11-197', 'serial prefixes checked against the dates the units were sold'],
+];
+---
+<Base title="Sources and Testing | Serial Number Age" description="Where our serial number rules come from and how we test them against recall notices and data plates with printed dates.">
+  <section>
+    <p class="crumbs"><a href="/">Home</a> › Sources and testing</p>
+    <h1>Sources and testing</h1>
+    <p class="lede">Manufacturers rarely publish their serial codes, and the guides that do often contradict each other. So we don't just copy a chart: we write each code as rules and test them against serial numbers whose dates are known.</p>
+  </section>
+  <section>
+    <h2>How we build the rules</h2>
+    <ol>
+      <li>Collect each brand's code from manufacturer documents, service notes and the published guides used by home inspectors, and compare them. Where they disagree, we note it.</li>
+      <li>Write the code as rules the decoder can run.</li>
+      <li>Test the rules against serial numbers with known dates (below). A rule that fails is fixed or marked as an estimate.</li>
+    </ol>
+  </section>
+  <section>
+    <h2>What we test against</h2>
+    <p>The best free proof is a government safety recall. US Consumer Product Safety Commission (CPSC) notices often list the serial numbers affected next to the dates the units were made or sold:</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Brands</th><th>Record</th><th>What it proves</th></tr></thead>
+      <tbody>{recalls.map((r) => <tr><td>{r[0]}</td><td class="small">{r[1]}</td><td class="small">{r[2]}</td></tr>)}</tbody>
+    </table></div>
+    <p>We also use data plates that print a manufacture date next to the serial number, and cases where several home inspectors agreed on a date. In our November 2026 test, all 34 serials backed by recall notices or printed dates decoded correctly, and 64 of 66 overall.</p>
+  </section>
+  <section>
+    <h2>What we found along the way</h2>
+    <ul>
+      <li>One widely used guide says digits 3 and 4 of an American Water Heater serial are the month. A 2001 recall notice (serials 0124 to 0127, sold June to September 2001) shows they are the <b>week</b>.</li>
+      <li>Two published Trane letter tables for 1983 to 2001 swap the letters S and Z. Until we find an official answer, the decoder shows both dates.</li>
+      <li>Rheem water heaters use two codes: older ones start with the month and year, newer ones with the week and year.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>How sure is each brand?</h2>
+    <ul>
+      <li><b>Tested against official records:</b> {STATUS_TEXT.verified}</li>
+      <li><b>Sources agree:</b> {STATUS_TEXT.checked}</li>
+      <li><b>Estimate:</b> {STATUS_TEXT.estimated}</li>
+    </ul>
+    <p class="small">Tested: {BRANDS.filter((b) => b.status === 'verified').map((b) => b.name).join(', ')}. Sources agree: {BRANDS.filter((b) => b.status === 'checked').map((b) => b.name).join(', ')}. Estimates: {BRANDS.filter((b) => b.status === 'estimated').map((b) => b.name).join(', ')}.</p>
+  </section>
+  <p class="note">Have a unit with the manufacture date printed on the label? <a href="/contact/">Send us the brand, serial number and date</a>. Each one makes the decoder more reliable.</p>
+</Base>

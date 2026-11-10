@@ -1,0 +1,132 @@
+---
+import { BRANDS, STATUS_TEXT } from '../lib/brands';
+import { EQUIP, type Equip } from '../lib/equipment';
+import { RULES } from '../lib/formats';
+interface Props { brand?: string; equip?: Equip; heading?: string }
+const { brand = '', equip, heading = 'Decode your serial number' } = Astro.props;
+const data = {
+  brands: BRANDS.map((b) => ({ s: b.slug, n: b.name, g: b.group, e: b.equip, r: b.rule, st: b.status })),
+  equip: Object.fromEntries(Object.values(EQUIP).map((e) => [e.slug, { n: e.name, min: e.lifeMin, max: e.lifeMax }])),
+  amb: Object.fromEntries(Object.entries(RULES).map(([k, v]) => [k, v.ambiguity || ''])),
+  status: STATUS_TEXT,
+  preset: { b: brand, e: equip || '' },
+};
+const hvac = BRANDS.filter((b) => b.group === 'hvac');
+const water = BRANDS.filter((b) => b.group === 'water');
+---
+<form class="decoder" data-decoder={JSON.stringify(data)} autocomplete="off">
+  <h2>{heading}</h2>
+  <div class="fields">
+    <div class="field">
+      <label for="dec-brand">Brand on the label</label>
+      <select id="dec-brand" name="b" required>
+        <option value="">Choose a brand</option>
+        <optgroup label="Furnaces, AC and heat pumps">{hvac.map((b) => <option value={b.slug} selected={b.slug === brand}>{b.name}</option>)}</optgroup>
+        <optgroup label="Water heaters">{water.map((b) => <option value={b.slug} selected={b.slug === brand}>{b.name}</option>)}</optgroup>
+      </select>
+    </div>
+    <div class="field">
+      <label for="dec-equip">Type of unit</label>
+      <select id="dec-equip" name="e"></select>
+    </div>
+    <div class="field full">
+      <label for="dec-serial">Serial number</label>
+      <input id="dec-serial" name="s" type="text" class="serial-input" inputmode="text" spellcheck="false" placeholder="e.g. 5898F06044" required />
+    </div>
+  </div>
+  <div class="btns"><button class="btn" type="submit">How old is it?</button><span class="small muted">Type it exactly as printed. Spaces and dashes don't matter.</span></div>
+  <div class="result" hidden aria-live="polite"></div>
+</form>
+
+<script>
+  import { decodeSerial, type RuleKey, type Candidate } from '../lib/decoder';
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+
+  for (const form of document.querySelectorAll<HTMLFormElement>('form[data-decoder]')) {
+    const D = JSON.parse(form.dataset.decoder!);
+    const bSel = form.querySelector<HTMLSelectElement>('[name=b]')!;
+    const eSel = form.querySelector<HTMLSelectElement>('[name=e]')!;
+    const sIn = form.querySelector<HTMLInputElement>('[name=s]')!;
+    const out = form.querySelector<HTMLDivElement>('.result')!;
+    const brand = () => D.brands.find((b: any) => b.s === bSel.value);
+
+    const fillEquip = (want?: string) => {
+      const b = brand();
+      const list: string[] = b ? b.e : ['furnace', 'air-conditioner', 'heat-pump', 'water-heater'];
+      const cur = want || eSel.value;
+      eSel.innerHTML = list.map((e) => `<option value="${e}"${e === cur ? ' selected' : ''}>${D.equip[e].n[0].toUpperCase() + D.equip[e].n.slice(1)}</option>`).join('');
+      eSel.disabled = list.length < 2;
+    };
+
+    const ageText = (c: Candidate) => {
+      const now = new Date();
+      const months = (now.getFullYear() - c.year) * 12 + (now.getMonth() + 1 - (c.month || 7));
+      const y = Math.floor(Math.max(0, months) / 12), m = Math.max(0, months) % 12;
+      return { years: Math.max(0, months) / 12, text: c.month ? `${y} year${y === 1 ? '' : 's'}${m ? ` ${m} month${m === 1 ? '' : 's'}` : ''} old` : `about ${y} years old` };
+    };
+    const madeText = (c: Candidate) =>
+      c.week ? `${MONTHS[c.month! - 1]} ${c.year}` : c.month ? `${MONTHS[c.month - 1]} ${c.year}` : `${c.year}`;
+
+    const card = (c: Candidate, eq: string) => {
+      const E = D.equip[eq];
+      const a = ageText(c);
+      const pct = Math.min(100, Math.round((a.years / E.max) * 100));
+      const cls = a.years >= E.min ? 'end' : a.years >= E.min * 0.66 ? 'mid' : '';
+      const life = a.years >= E.max ? `That is past the typical life of a ${E.n} (${E.min} to ${E.max} years).`
+        : a.years >= E.min ? `That is inside the usual replacement window for a ${E.n} (${E.min} to ${E.max} years). Start planning for a replacement.`
+        : `A ${E.n} typically lasts ${E.min} to ${E.max} years, so it has roughly ${Math.max(1, Math.round(E.min - a.years))} to ${Math.round(E.max - a.years)} years of typical life left.`;
+      const flags: string[] = [];
+      if ((eq === 'air-conditioner' || eq === 'heat-pump') && c.year < 2010) flags.push(`Made before 2010, so it almost certainly uses <b>R-22 refrigerant</b>. R-22 has not been produced in the US since 2020, so a leak repair can be very expensive. <a href="/guides/r22-air-conditioners/">What that means</a>`);
+      if ((eq === 'air-conditioner' || eq === 'heat-pump') && c.year === 2010) flags.push('Made in 2010, the year R-22 was phased out of new systems. Check the label: it will say R-22 or R-410A.');
+      if (eq === 'furnace' && c.year < 1992) flags.push('Made before the 1992 federal efficiency minimum (78% AFUE). A furnace this old may waste a third or more of its fuel.');
+      if (eq === 'water-heater' && a.years >= 6) flags.push('Older than a typical 6-year tank warranty. Check the label for the warranty length.');
+      return `<div class="cand">
+        <p class="label">Manufactured</p>
+        <p class="made">${madeText(c)}</p>
+        ${c.week ? `<p class="small muted">Week ${c.week} of ${c.year}.</p>` : ''}
+        <p class="age">It is <b>${a.text}</b>.</p>
+        <div class="lifebar" role="img" aria-label="${pct}% of typical life used"><span class="${cls}" style="width:${pct}%"></span></div>
+        <p class="small">${life}</p>
+        ${flags.length ? `<ul class="flags">${flags.map((f) => `<li>${f}</li>`).join('')}</ul>` : ''}
+        <p class="small muted">Read as: ${esc(c.style)}.</p>
+      </div>`;
+    };
+
+    const run = (push = true) => {
+      const b = brand(); const eq = eSel.value; const serial = sIn.value.trim();
+      if (!b || !serial) return;
+      const rule: RuleKey = b.r[eq];
+      const cands = decodeSerial(rule, serial);
+      out.hidden = false;
+      if (!cands.length) {
+        out.innerHTML = `<p><b>That doesn't match a ${esc(b.n)} serial format we know.</b></p>
+          <ul><li>Check for the letter O against the number 0, and I against 1.</li><li>Make sure you copied the <b>serial</b> number, not the model number.</li><li>Many labels print the manufacture date directly ("Mfg. date" or "MFD"). If yours does, that is the answer.</li><li>Very old units (before about 1980) often use codes we don't decode yet.</li></ul>
+          <p><a href="/${b.s}/#formats">See how ${esc(b.n)} serial numbers work</a></p>`;
+      } else {
+        const head = cands.length > 1 ? `<p><b>This serial fits ${cands.length} possible dates.</b> ${esc(D.amb[rule] || '')}</p>` : '';
+        const summary = `${b.n} ${D.equip[eq].n}, serial ${serial.toUpperCase()}: manufactured ${cands.map(madeText).join(' or ')} (decoded with serialnumberage.com)`;
+        out.innerHTML = head + cands.map((c) => card(c, eq)).join('') +
+          `<div class="btns"><button type="button" class="btn ghost" data-copy="${esc(summary)}">Copy result</button><span class="small muted">For inspection reports and listings.</span></div>
+           <p class="status"><b>How sure is this?</b> ${esc(D.status[b.st])} <a href="/sources/">How we test</a>.</p>`;
+      }
+      if (push) {
+        const u = new URL(location.href); u.searchParams.set('b', b.s); u.searchParams.set('e', eq); u.searchParams.set('s', serial);
+        history.replaceState(null, '', u);
+      }
+    };
+
+    bSel.addEventListener('change', () => fillEquip());
+    form.addEventListener('submit', (e) => { e.preventDefault(); run(); });
+    out.addEventListener('click', (e) => {
+      const t = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-copy]');
+      if (!t) return;
+      navigator.clipboard?.writeText(t.dataset.copy!).then(() => { t.textContent = 'Copied'; });
+    });
+
+    const q = new URLSearchParams(location.search);
+    if (q.get('b') && D.brands.some((b: any) => b.s === q.get('b'))) bSel.value = q.get('b')!;
+    fillEquip(q.get('e') || D.preset.e || undefined);
+    if (q.get('s')) { sIn.value = q.get('s')!; run(false); }
+  }
+</script>

@@ -1,0 +1,24 @@
+---
+import { RULES } from '../lib/formats';
+import type { RuleKey } from '../lib/decoder';
+interface Props { rule: RuleKey; name: string }
+const { rule, name } = Astro.props;
+const R = RULES[rule];
+---
+<section id="formats">
+  <h2>How to read a {name} serial number</h2>
+  <p>{R.summary}</p>
+  <div class="formats">
+    {R.formats.map((f) => (
+      <div class="fmt">
+        <h3>{f.title}</h3>
+        <p class="pattern" aria-label="Pattern">{f.pattern}</p>
+        <ol>{f.steps.map((s) => <li>{s}</li>)}</ol>
+        <p class="small">Example: <span class="serial">{f.example}</span></p>
+      </div>
+    ))}
+  </div>
+  {R.months && <p class="small"><b>Month letters:</b> {R.months}</p>}
+  {R.ambiguity && <p class="note"><b>When one serial fits two dates:</b> {R.ambiguity}</p>}
+  {R.notCovered && <p class="small muted">{R.notCovered}</p>}
+</section>

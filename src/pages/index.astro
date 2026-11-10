@@ -1,0 +1,41 @@
+---
+import Base from '../layouts/Base.astro';
+import Decoder from '../components/Decoder.astro';
+import { BRANDS } from '../lib/brands';
+import { SITE_NAME, SITE_URL } from '../lib/site';
+const hvac = BRANDS.filter((b) => b.group === 'hvac');
+const water = BRANDS.filter((b) => b.group === 'water');
+const jsonLd = [
+  { '@context': 'https://schema.org', '@type': 'WebSite', name: SITE_NAME, url: `${SITE_URL}/` },
+  { '@context': 'https://schema.org', '@type': 'WebApplication', name: 'HVAC and water heater serial number age decoder', url: `${SITE_URL}/`, applicationCategory: 'UtilitiesApplication', operatingSystem: 'Any', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } },
+];
+---
+<Base title="How Old Is My Furnace, AC or Water Heater? Age by Serial Number" description="Free serial number decoder for furnaces, air conditioners, heat pumps and water heaters. Pick the brand, type the serial number, get the month and year it was made." jsonLd={jsonLd}>
+  <section>
+    <h1 style="font-size:40px;line-height:44px">How old is your furnace, AC or water heater?</h1>
+    <p class="lede">Most makers hide the manufacture date in the serial number, each in its own code. Pick the brand and type the serial number. You'll get the month and year it was made, its age, and how much of a typical life it has left.</p>
+  </section>
+  <Decoder />
+  <section>
+    <h2>Furnaces, air conditioners and heat pumps</h2>
+    <ul class="link-grid">{hvac.map((b) => <li><a href={`/${b.slug}/`}>{b.name}</a></li>)}</ul>
+  </section>
+  <section>
+    <h2>Water heaters</h2>
+    <ul class="link-grid">{water.map((b) => <li><a href={`/${b.slug}/`}>{b.name}</a></li>)}</ul>
+  </section>
+  <section>
+    <h2>Why use this decoder</h2>
+    <p>The serial code guides online often disagree with each other, and some have mistakes in their own examples. We wrote every rule as code and tested it against serial numbers with known dates: government recall notices that list serial numbers next to manufacture dates, and data plates that print the date. When a serial fits two dates, we show both and how to tell them apart. <a href="/sources/">How we test</a>.</p>
+  </section>
+  <section>
+    <h2>Guides</h2>
+    <ul class="link-grid">
+      <li><a href="/guides/where-is-the-serial-number/">Where is the serial number?</a></li>
+      <li><a href="/guides/how-long-does-a-furnace-last/">How long does a furnace last?</a></li>
+      <li><a href="/guides/how-long-does-a-water-heater-last/">How long does a water heater last?</a></li>
+      <li><a href="/guides/r22-air-conditioners/">Does my AC use R-22?</a></li>
+      <li><a href="/who-makes-what/">Who makes what</a></li>
+    </ul>
+  </section>
+</Base>

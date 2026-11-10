@@ -1,0 +1,71 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Decoder from '../../../components/Decoder.astro';
+import Plate from '../../../components/Plate.astro';
+import Formats from '../../../components/Formats.astro';
+import Life from '../../../components/Life.astro';
+import Shop from '../../../components/Shop.astro';
+import { BRANDS, sisters, brandEquipPath, STATUS_TEXT, type Brand } from '../../../lib/brands';
+import { EQUIP, type Equip } from '../../../lib/equipment';
+import { RULES } from '../../../lib/formats';
+import { SITE_NAME, SITE_URL } from '../../../lib/site';
+
+export function getStaticPaths() {
+  return BRANDS.flatMap((b) => b.pages.map((e) => ({ params: { brand: b.slug, equip: e }, props: { b, e } })));
+}
+const { b, e } = Astro.props as { b: Brand; e: Equip };
+const E = EQUIP[e];
+const rule = b.rule[e]!;
+const R = RULES[rule];
+const Name = E.name.replace(/^./, (c) => c.toUpperCase());
+const Title = E.name.replace(/\b\w/g, (c) => c.toUpperCase());
+const sis = sisters(b).filter((s) => s.equip.includes(e));
+const extra: Record<string, string> = {
+  furnace: 'Furnaces made before 1992 were built before the federal 78% efficiency minimum. If yours is that old, a new 95% furnace could cut your heating fuel use by a quarter or more.',
+  'air-conditioner': 'Air conditioners made before 2010 almost always use R-22 refrigerant, which is no longer produced in the US. If an older unit leaks, replacing it is often cheaper than recharging it.',
+  'water-heater': 'Most tank water heaters come with a 6-year warranty (some 9 or 12). A tank past its warranty that shows rust at the base or rumbles when heating is close to the end.',
+};
+const faqs = [
+  { q: `How do I find the age of my ${b.name} ${E.name}?`, a: `${R.summary} You'll find the serial number on the data plate. ${E.where}` },
+  { q: `How long does a ${b.name} ${E.name} last?`, a: `Like most ${E.plural}, a ${b.name} typically lasts ${E.lifeMin} to ${E.lifeMax} years with regular servicing.` },
+  ...(R.ambiguity ? [{ q: 'Why does my serial number give two possible dates?', a: R.ambiguity }] : []),
+];
+const jsonLd = [
+  { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
+  { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: SITE_NAME, item: `${SITE_URL}/` },
+    { '@type': 'ListItem', position: 2, name: b.name, item: `${SITE_URL}/${b.slug}/` },
+    { '@type': 'ListItem', position: 3, name: `${b.name} ${E.name} age`, item: `${SITE_URL}${brandEquipPath(b, e)}` } ] },
+];
+---
+<Base title={`${b.name} ${Title} Age by Serial Number | How Old Is It?`} description={`How old is your ${b.name} ${E.name}? Type the serial number for the month and year it was made, its age, and how much of a typical ${E.lifeMin} to ${E.lifeMax} year life is left.`} jsonLd={jsonLd}>
+  <section>
+    <p class="crumbs"><a href="/">Home</a> › <a href={`/${b.slug}/`}>{b.name}</a> › {Name}</p>
+    <h1>How Old Is My {b.name} {Title}?</h1>
+    <p class="lede">{R.summary} Type the serial number from your {E.name}'s data plate below.</p>
+  </section>
+  <Decoder brand={b.slug} equip={e} heading={`${b.name} ${E.name} age decoder`} />
+  <section>
+    <h2>Where the serial number is on a {E.name}</h2>
+    <Plate serial={R.formats[0].example} kind={E.name} caption={`Example ${b.name} serial number on a ${E.name} data plate.`} />
+    <p>{E.where}</p>
+  </section>
+  <Formats rule={rule} name={b.name} />
+  <Life equip={e} />
+  {extra[e] && <p class="note">{extra[e]}</p>}
+  <section class="faq">
+    <h2>Questions</h2>
+    {faqs.map((f) => <div><h3>{f.q}</h3><p>{f.a}</p></div>)}
+  </section>
+  <section>
+    <h2>Related</h2>
+    <ul class="link-grid">
+      <li><a href={`/${b.slug}/`}>All {b.name} serial numbers</a></li>
+      {b.pages.filter((x) => x !== e).map((x) => <li><a href={brandEquipPath(b, x)}>{b.name} {EQUIP[x].name} age</a></li>)}
+      {sis.map((s) => <li><a href={s.pages.includes(e) ? brandEquipPath(s, e) : `/${s.slug}/`}>{s.name} {E.name} age</a></li>)}
+      <li><a href={E.hub}>{Name} age, any brand</a></li>
+    </ul>
+  </section>
+  <p class="status"><b>How sure are these dates?</b> {STATUS_TEXT[b.status]} <a href="/sources/">How we test the decoder</a>.</p>
+  <Shop equip={e} />
+</Base>
