@@ -1,0 +1,130 @@
+---
+import Base from '../../../layouts/Base.astro';
+import KeyStat from '../../../components/stats/KeyStat.astro';
+import Bars from '../../../components/stats/Bars.astro';
+import StateTable from '../../../components/stats/StateTable.astro';
+import Cite from '../../../components/stats/Cite.astro';
+import { SITE_NAME, SITE_URL } from '../../../lib/site';
+import { recs, pct, mil, rowsFrom, distRows, STATS_UPDATED, STATS_UPDATED_LABEL, RECS_CITE, RECS_URL } from '../../../lib/stats';
+
+const path = '/statistics/air-conditioner-age/';
+const A = recs.ac;
+const title = 'Air Conditioner Age Statistics: How Old Are US AC Units?';
+const description = `${mil(A.summary['15plus'].homes_m)} US homes cool with an air conditioner 15+ years old, and ${pct(A.central_10plus)} of central ACs predate the R-22 phase-out. Region, state and type data from EIA microdata.`;
+const states = Object.entries(A.by_state).filter(([, s]) => s.n_base >= 30 && s['15plus'].ok).sort((a, b) => b[1]['15plus'].pct - a[1]['15plus'].pct);
+const [topSt, topS] = states[0];
+const [lowSt, lowS] = states[states.length - 1];
+const reg = A.by_region, type = A.by_type, ten = A.by_tenure;
+
+const faq = [
+  ['How old is the average air conditioner in the US?', `The survey records age in bands. The median main air conditioner is 5 to 9 years old. ${pct(A.summary['10plus'])} are 10 or more years old and ${pct(A.summary['15plus'])} are 15 or more.`],
+  ['How many central air conditioners still use R-22?', `There is no direct count, but ${pct(A.central_10plus)} of central air conditioners (about ${mil(A.central_10plus.homes_m)}) were 10 or more years old at the time of the survey, meaning they were installed around 2010 or earlier, when most new systems still used R-22. Check the data plate to be sure.`],
+  ['Which state has the oldest air conditioners?', `Among states with a reliable estimate, ${topSt} has the highest share of main air conditioners 15+ years old (${pct(topS['15plus'])}) and ${lowSt} the lowest (${pct(lowS['15plus'])}).`],
+  ['How long does a central air conditioner last?', 'Most central air conditioners last 12 to 17 years. Coastal salt air, heavy use and skipped maintenance shorten that.'],
+  ['How do I find my air conditioner\'s age?', 'The manufacture date is coded into the serial number on the outdoor unit\'s data plate. Our free decoder reads it for the major brands.'],
+];
+const jsonLd = [
+  { '@context': 'https://schema.org', '@type': 'Article', headline: title, description, dateModified: STATS_UPDATED, datePublished: STATS_UPDATED, author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL }, publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL }, mainEntityOfPage: `${SITE_URL}${path}` },
+  { '@context': 'https://schema.org', '@type': 'Dataset', name: 'Age of home air conditioners by US state', description: 'Share of US homes whose main air conditioning equipment is under 5, 10+, 15+ and 20+ years old, by state, computed from EIA RECS 2020 public microdata with jackknife standard errors.', url: `${SITE_URL}${path}`, creator: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL }, license: 'https://creativecommons.org/licenses/by/4.0/', isAccessibleForFree: true, temporalCoverage: '2020', spatialCoverage: { '@type': 'Place', name: 'United States' }, isBasedOn: RECS_URL, dateModified: STATS_UPDATED,
+    distribution: [{ '@type': 'DataDownload', encodingFormat: 'text/csv', contentUrl: `${SITE_URL}/data/ac-age-by-state.csv` }] },
+  { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
+  { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+    { '@type': 'ListItem', position: 2, name: 'Statistics', item: `${SITE_URL}/statistics/` },
+    { '@type': 'ListItem', position: 3, name: 'Air conditioner age', item: `${SITE_URL}${path}` } ] },
+];
+---
+<Base title={title} description={description} jsonLd={jsonLd}>
+  <section>
+    <p class="crumbs"><a href="/">Home</a> › <a href="/statistics/">Statistics</a> › Air conditioner age</p>
+    <h1>Air conditioner age statistics: how old are US AC units?</h1>
+    <p class="updated">Updated {STATS_UPDATED_LABEL} · Original analysis of {(recs.sample_homes).toLocaleString('en-US')} household records from the federal Residential Energy Consumption Survey</p>
+    <p class="lede">About one in five US homes with air conditioning cools with equipment at least 15 years old. We analysed the US Energy Information Administration's household-level survey data to show where the oldest AC units are, which types last longest, and how many central systems are old enough to run on phased-out R-22 refrigerant.</p>
+    <nav class="toc" aria-label="On this page">
+      <a href="#key-findings">Key findings</a><a href="#age-distribution">Age breakdown</a><a href="#r22">R-22 era systems</a><a href="#by-region">By region</a><a href="#by-state">By state</a><a href="#by-type">By type</a><a href="#methodology">Methodology</a><a href="#cite">Cite</a>
+    </nav>
+  </section>
+
+  <section id="key-findings">
+    <h2>Key findings</h2>
+    <ul class="kstats">
+      <KeyStat id="ac-15-plus" value={mil(A.summary['15plus'].homes_m)} source="EIA RECS 2020">
+        US homes cool mainly with an air conditioner that is <b>15 or more years old</b> ({pct(A.summary['15plus'])} of air-conditioned homes).
+      </KeyStat>
+      <KeyStat id="central-ac-r22-era" value={pct(A.central_10plus)} source="EIA RECS 2020">
+        of <b>central air conditioners</b> were 10+ years old, old enough to date from the era when most new systems used <b>R-22</b> refrigerant (about {mil(A.central_10plus.homes_m)} systems).
+      </KeyStat>
+      <KeyStat id="central-ac-20-plus" value={pct(A.central_summary['20plus'])} source="EIA RECS 2020">
+        of central air conditioners are <b>20 or more years old</b>, about {mil(A.central_summary['20plus'].homes_m)} systems.
+      </KeyStat>
+      <KeyStat id="midwest-oldest-ac" value={pct(reg['Midwest']['15plus'])} source="EIA RECS 2020">
+        of AC units in the <b>Midwest</b> are 15+ years old, the oldest region. In the South, where they run hardest, it's {pct(reg['South']['15plus'])}.
+      </KeyStat>
+      <KeyStat id="oldest-state-ac" value={pct(topS['15plus'])} source="EIA RECS 2020">
+        of main air conditioners in <b>{topSt}</b> are 15+ years old, the highest of any state (or DC) with a reliable estimate. {lowSt} is lowest at {pct(lowS['15plus'])}.
+      </KeyStat>
+      <KeyStat id="any-equipment-15-plus" value={mil(recs.any_15plus.homes_m)} source="EIA RECS 2020">
+        US homes ({pct(recs.any_15plus)}) have <b>at least one</b> of their main heating system, air conditioner or water heater aged 15 or more.
+      </KeyStat>
+    </ul>
+  </section>
+
+  <section id="age-distribution">
+    <h2>How old are US air conditioners?</h2>
+    <p>The median main air conditioner is 5 to 9 years old. Central air conditioners typically last 12 to 17 years.</p>
+    <Bars id="ac-age-bands" caption="Age of the main air conditioning equipment in US homes" rows={distRows(A.dist)} valueLabel="Share of homes" extraLabel="Homes" highlight={['15 to 19 years', '20+ years']} />
+    <Bars id="central-ac-age-bands" caption="Age of central air conditioners (including central heat pumps)" rows={distRows(A.central_dist)} valueLabel="Share of systems" extraLabel="Homes" highlight={['15 to 19 years', '20+ years']} />
+    <p class="small muted">± figures are 95% confidence margins. Base: {mil(A.summary.base_homes_m)} homes with air conditioning; {mil(A.central_summary.base_homes_m)} with central AC as the main system.</p>
+  </section>
+
+  <section id="r22">
+    <h2>How many systems may still use R-22?</h2>
+    <p>From 2010, new air conditioners in the US could no longer be made with R-22, and production of the refrigerant itself ended in 2020. The survey doesn't ask which refrigerant a system uses, but age is a good guide: {pct(A.central_10plus)} of central systems were 10 or more years old when surveyed, so they were installed around 2010 or earlier. Recharging an R-22 system is now expensive because only recycled supplies remain. <a href="/guides/r22-air-conditioners/">How to check if your AC uses R-22</a>.</p>
+  </section>
+
+  <section id="by-region">
+    <h2>Air conditioner age by region</h2>
+    <Bars id="ac-15-plus-region" caption="Share of main air conditioners 15+ years old, by Census region" rows={rowsFrom(reg, '15plus', { sort: true })} valueLabel="15+ years old" />
+    <p>Midwestern systems are oldest, likely because they run for fewer months each year. Southern systems work much harder and are replaced sooner.</p>
+  </section>
+
+  <section id="by-state">
+    <h2>Air conditioner age by state</h2>
+    <p>Estimates with a relative standard error over 30% are withheld; the CSV has standard errors for every figure.</p>
+    <StateTable id="ac-age-state-table" caption="Main air conditioner age by state, sorted by share 15+ years old" data={A.by_state} csv="/data/ac-age-by-state.csv" noun="air conditioner" sortKey="15plus" cols={['15plus', '20plus', '10plus', 'under5']} />
+  </section>
+
+  <section id="by-type">
+    <h2>By type of air conditioner, tenure and home age</h2>
+    <p>Window, wall and portable units turn over fastest. Evaporative (swamp) coolers, common in the dry Southwest, are the oldest type. Owners and renters have similar shares of old AC ({pct(ten['Owner-occupied']['15plus'])} vs {pct(ten['Rented']['15plus'])} at 15+ years).</p>
+    <Bars id="ac-15-plus-type" caption="Share of main air conditioners 15+ years old, by type" rows={rowsFrom(type, '15plus', { sort: true })} valueLabel="15+ years old" />
+    <Bars id="ac-15-plus-yearbuilt" caption="Share of main air conditioners 15+ years old, by year the home was built" rows={rowsFrom(A.by_yearmade, '15plus')} valueLabel="15+ years old" />
+  </section>
+
+  <section id="faq" class="faq">
+    <h2>Questions</h2>
+    {faq.map(([q, a]) => (<div><h3>{q}</h3><p>{a}</p></div>))}
+  </section>
+
+  <section id="methodology" class="methods">
+    <h2>Methodology</h2>
+    <p>We analysed the public-use microdata file of the 2020 Residential Energy Consumption Survey (RECS) from the US Energy Information Administration: {(recs.sample_homes).toLocaleString('en-US')} sampled households representing {mil(recs.total_homes_m)} occupied US homes. Households reported the age of their main air conditioning equipment (ACEQUIPAGE) in six bands and its type (ACEQUIPM_PUB). "Central AC" includes central heat pumps used for cooling.</p>
+    <p>Estimates use the survey's final weight (NWEIGHT); standard errors use EIA's 60 jackknife replicate weights, as set out in the RECS microdata guide. We withhold estimates with a relative standard error above 30%. Ages describe equipment at the time of the survey (2020 to early 2021) and some answers are imputed by EIA.</p>
+    <h3>Sources</h3>
+    <ul class="sources-list">
+      <li><a href={RECS_URL}>{RECS_CITE}</a>.</li>
+      <li><a href="https://www.epa.gov/ods-phaseout/phaseout-class-ii-ozone-depleting-substances">US EPA, Phaseout of Class II Ozone-Depleting Substances (R-22 / HCFC-22)</a>.</li>
+    </ul>
+  </section>
+
+  <Cite title="Air Conditioner Age Statistics" path={path} />
+
+  <section>
+    <h2>More statistics</h2>
+    <ul class="link-grid">
+      <li><a href="/statistics/furnace-age/">Furnace age statistics</a></li>
+      <li><a href="/statistics/water-heater-age/">Water heater age statistics</a></li>
+      <li><a href="/statistics/">All statistics</a></li>
+    </ul>
+  </section>
+</Base>

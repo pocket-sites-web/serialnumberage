@@ -1,0 +1,145 @@
+---
+import Base from '../../../layouts/Base.astro';
+import KeyStat from '../../../components/stats/KeyStat.astro';
+import Bars from '../../../components/stats/Bars.astro';
+import StateTable from '../../../components/stats/StateTable.astro';
+import Cite from '../../../components/stats/Cite.astro';
+import { SITE_NAME, SITE_URL } from '../../../lib/site';
+import { recs, pct, mil, rowsFrom, distRows, STATS_UPDATED, STATS_UPDATED_LABEL, RECS_CITE, RECS_URL, CPSC_CITE, CPSC_URL } from '../../../lib/stats';
+
+const path = '/statistics/water-heater-age/';
+const W = recs.water;
+const title = 'Water Heater Age Statistics: How Old Are US Water Heaters?';
+const description = `${pct(W.summary['10plus'])} of US homes have a water heater 10+ years old, past a typical tank's life. Tankless growth, fuel, region and state data from EIA microdata.`;
+const states = Object.entries(W.by_state).filter(([, s]) => s.n_base >= 30 && s['10plus'].ok).sort((a, b) => b[1]['10plus'].pct - a[1]['10plus'].pct);
+const [topSt, topS] = states[0];
+const [lowSt, lowS] = states[states.length - 1];
+const reg = W.by_region, size = W.by_size, fuel = W.by_fuel, ten = W.by_tenure;
+const cpscWH = [8, 5, 2, 5, 9, 6, 4, 5, 18, 3, 4];
+const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+
+const faq = [
+  ['How old is the average water heater in the US?', `The federal survey records age in bands, so there is no exact average. The median US water heater is 5 to 9 years old. ${pct(W.summary['10plus'])} are 10 or more years old and ${pct(W.summary['15plus'])} are 15 or more.`],
+  ['How many water heaters are past their expected life?', `A tank water heater typically lasts 8 to 12 years. About ${mil(W.summary['10plus'].homes_m)} US homes have a main water heater that is 10+ years old, and ${mil(W.summary['20plus'].homes_m)} have one 20+ years old.`],
+  ['How common are tankless water heaters?', `${pct(W.tankless_all)} of US homes have a tankless main water heater. Among water heaters installed in the two years before the survey, the share was ${pct(W.tankless_by_age['Under 2 years'])}.`],
+  ['Which state has the oldest water heaters?', `Among places with a reliable estimate, ${topSt} has the highest share of water heaters 10+ years old (${pct(topS['10plus'])}) and ${lowSt} the lowest (${pct(lowS['10plus'])}).`],
+  ['How can I tell how old my water heater is?', 'The manufacture date is coded into the serial number on the rating label. Use our free decoder to read it for your brand.'],
+];
+const jsonLd = [
+  { '@context': 'https://schema.org', '@type': 'Article', headline: title, description, dateModified: STATS_UPDATED, datePublished: STATS_UPDATED, author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL }, publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL }, mainEntityOfPage: `${SITE_URL}${path}` },
+  { '@context': 'https://schema.org', '@type': 'Dataset', name: 'Age of home water heaters by US state', description: 'Share of US homes whose main water heater is under 5, 10+, 15+ and 20+ years old, by state, computed from EIA RECS 2020 public microdata with jackknife standard errors.', url: `${SITE_URL}${path}`, creator: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL }, license: 'https://creativecommons.org/licenses/by/4.0/', isAccessibleForFree: true, temporalCoverage: '2020', spatialCoverage: { '@type': 'Place', name: 'United States' }, isBasedOn: RECS_URL, dateModified: STATS_UPDATED,
+    distribution: [{ '@type': 'DataDownload', encodingFormat: 'text/csv', contentUrl: `${SITE_URL}/data/water-heater-age-by-state.csv` }] },
+  { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
+  { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+    { '@type': 'ListItem', position: 2, name: 'Statistics', item: `${SITE_URL}/statistics/` },
+    { '@type': 'ListItem', position: 3, name: 'Water heater age', item: `${SITE_URL}${path}` } ] },
+];
+---
+<Base title={title} description={description} jsonLd={jsonLd}>
+  <section>
+    <p class="crumbs"><a href="/">Home</a> › <a href="/statistics/">Statistics</a> › Water heater age</p>
+    <h1>Water heater age statistics: how old are US water heaters?</h1>
+    <p class="updated">Updated {STATS_UPDATED_LABEL} · Original analysis of {(recs.sample_homes).toLocaleString('en-US')} household records from the federal Residential Energy Consumption Survey</p>
+    <p class="lede">More than a third of American homes have a water heater that is at least 10 years old, the point at which a typical tank is on borrowed time. We analysed the US Energy Information Administration's household-level survey data to show how old water heaters are by state, region, fuel and tank size, and how quickly tankless models are taking over.</p>
+    <nav class="toc" aria-label="On this page">
+      <a href="#key-findings">Key findings</a><a href="#age-distribution">Age breakdown</a><a href="#tankless">Tankless growth</a><a href="#by-region">By region</a><a href="#by-state">By state</a><a href="#by-fuel">By fuel and size</a><a href="#carbon-monoxide">Carbon monoxide</a><a href="#methodology">Methodology</a><a href="#cite">Cite</a>
+    </nav>
+  </section>
+
+  <section id="key-findings">
+    <h2>Key findings</h2>
+    <ul class="kstats">
+      <KeyStat id="water-heaters-10-plus" value={mil(W.summary['10plus'].homes_m)} source="EIA RECS 2020">
+        US homes have a main water heater that is <b>10 or more years old</b> ({pct(W.summary['10plus'])} of homes), beyond the 8 to 12 year life of a typical tank.
+      </KeyStat>
+      <KeyStat id="water-heaters-20-plus" value={mil(W.summary['20plus'].homes_m)} source="EIA RECS 2020">
+        homes are still running a water heater that is <b>20 or more years old</b> ({pct(W.summary['20plus'])}).
+      </KeyStat>
+      <KeyStat id="tankless-new-installs" value={pct(W.tankless_by_age['Under 2 years'])} source="EIA RECS 2020">
+        of water heaters installed in the previous two years were <b>tankless</b>, almost double the {pct(W.tankless_all)} share across all homes.
+      </KeyStat>
+      <KeyStat id="oil-water-heaters" value={pct(fuel['Fuel oil']['15plus'])} source="EIA RECS 2020">
+        of <b>oil-fired</b> water heaters are 15+ years old, more than double the share for gas ({pct(fuel['Natural gas']['15plus'])}) or electric ({pct(fuel['Electricity']['15plus'])}).
+      </KeyStat>
+      <KeyStat id="oldest-state-water" value={pct(topS['10plus'])} source="EIA RECS 2020">
+        of water heaters in <b>{topSt}</b> are 10+ years old, the highest of any state (or DC) with a reliable estimate. {lowSt} is lowest at {pct(lowS['10plus'])}.
+      </KeyStat>
+      <KeyStat id="west-oldest-water" value={pct(reg['West']['10plus'])} source="EIA RECS 2020">
+        of water heaters in the <b>West</b> are 10+ years old, the highest of the four regions, against {pct(reg['South']['10plus'])} in the South.
+      </KeyStat>
+      <KeyStat id="large-tanks-older" value={pct(size['Large tank (50 gal or more)']['15plus'])} source="EIA RECS 2020">
+        of <b>large tanks</b> (50 gallons or more) are 15+ years old, the oldest size group. Only {pct(size['Tankless']['15plus'])} of tankless units are.
+      </KeyStat>
+      <KeyStat id="water-heater-co-deaths" value={String(sum(cpscWH))} source="CPSC, 2011 to 2021">
+        estimated US deaths from <b>carbon monoxide linked to water heaters</b> in 2011 to 2021.
+      </KeyStat>
+    </ul>
+  </section>
+
+  <section id="age-distribution">
+    <h2>How old are US water heaters?</h2>
+    <p>The median water heater is 5 to 9 years old. Tank water heaters usually last <a href="/guides/how-long-does-a-water-heater-last/">8 to 12 years</a>, so the bottom three rows are units at or past the end of a typical life.</p>
+    <Bars id="water-heater-age-bands" caption="Age of the main water heater in US homes" rows={distRows(W.dist)} valueLabel="Share of homes" extraLabel="Homes" highlight={['10 to 14 years', '15 to 19 years', '20+ years']} />
+    <p class="small muted">± figures are 95% confidence margins. Base: {mil(W.summary.base_homes_m)} homes with a water heater.</p>
+  </section>
+
+  <section id="tankless">
+    <h2>How fast tankless water heaters are growing</h2>
+    <p>Comparing water heaters by age gives a picture of what people bought in different years. Tankless models are {pct(W.tankless_by_age['Under 2 years'])} of the newest water heaters but only around 3% of those 15+ years old.</p>
+    <Bars id="tankless-share-by-age" caption="Tankless share of main water heaters, by age of the water heater" rows={distRows(W.tankless_by_age).map((r) => ({ label: r.label, value: r.value, se: r.se }))} valueLabel="Tankless share" />
+  </section>
+
+  <section id="by-region">
+    <h2>Water heater age by region</h2>
+    <Bars id="water-10-plus-region" caption="Share of water heaters 10+ years old, by Census region" rows={rowsFrom(reg, '10plus', { sort: true })} valueLabel="10+ years old" />
+    <Bars id="water-15-plus-region" caption="Share of water heaters 15+ years old, by Census region" rows={rowsFrom(reg, '15plus', { sort: true })} valueLabel="15+ years old" />
+  </section>
+
+  <section id="by-state">
+    <h2>Water heater age by state</h2>
+    <p>State figures come from smaller samples, so their margins are wider. Estimates with a relative standard error over 30% are withheld; the CSV has standard errors for every figure.</p>
+    <StateTable id="water-heater-age-state-table" caption="Water heater age by state, sorted by share 10+ years old" data={W.by_state} csv="/data/water-heater-age-by-state.csv" noun="water heater" sortKey="10plus" cols={['10plus', '15plus', '20plus', 'under5']} />
+  </section>
+
+  <section id="by-fuel">
+    <h2>By fuel, tank size and tenure</h2>
+    <p>Gas and electric water heaters age at almost the same rate across the country. Oil-fired units, mostly found in the Northeast, are much older. Renters and owners have similar shares of old water heaters ({pct(ten['Rented']['10plus'])} vs {pct(ten['Owner-occupied']['10plus'])} at 10+ years).</p>
+    <Bars id="water-15-plus-fuel" caption="Share of water heaters 15+ years old, by fuel" rows={rowsFrom(fuel, '15plus', { sort: true })} valueLabel="15+ years old" />
+    <Bars id="water-15-plus-size" caption="Share of water heaters 15+ years old, by tank size" rows={rowsFrom(size, '15plus', { sort: true })} valueLabel="15+ years old" />
+    <Bars id="water-10-plus-yearbuilt" caption="Share of water heaters 10+ years old, by year the home was built" rows={rowsFrom(W.by_yearmade, '10plus')} valueLabel="10+ years old" />
+  </section>
+
+  <section id="carbon-monoxide">
+    <h2>Water heaters and carbon monoxide</h2>
+    <p>The Consumer Product Safety Commission estimates that water heaters were linked to <b>{sum(cpscWH)}</b> non-fire carbon monoxide deaths in the US from 2011 to 2021, including an estimated 18 in 2019 alone. Gas and propane water heaters need a clear, correctly fitted vent. An old unit with a corroded or disconnected flue is a risk worth checking.</p>
+    <p class="note">Not sure how old yours is? <a href="/water-heater-age/">Decode your water heater's serial number</a> to find the year it was made.</p>
+  </section>
+
+  <section id="faq" class="faq">
+    <h2>Questions</h2>
+    {faq.map(([q, a]) => (<div><h3>{q}</h3><p>{a}</p></div>))}
+  </section>
+
+  <section id="methodology" class="methods">
+    <h2>Methodology</h2>
+    <p>We analysed the public-use microdata file of the 2020 Residential Energy Consumption Survey (RECS) from the US Energy Information Administration: {(recs.sample_homes).toLocaleString('en-US')} sampled households representing {mil(recs.total_homes_m)} occupied US homes. Households reported the age of their main water heater (WHEATAGE) in six bands, plus its fuel (FUELH2O) and size (WHEATSIZ).</p>
+    <p>Estimates use the survey's final weight (NWEIGHT); standard errors use EIA's 60 jackknife replicate weights, as set out in the RECS microdata guide. We withhold estimates with a relative standard error above 30%. Ages describe equipment at the time of the survey (2020 to early 2021) and some answers are imputed by EIA.</p>
+    <h3>Sources</h3>
+    <ul class="sources-list">
+      <li><a href={RECS_URL}>{RECS_CITE}</a>.</li>
+      <li><a href={CPSC_URL}>{CPSC_CITE}</a> (Table 1).</li>
+    </ul>
+  </section>
+
+  <Cite title="Water Heater Age Statistics" path={path} />
+
+  <section>
+    <h2>More statistics</h2>
+    <ul class="link-grid">
+      <li><a href="/statistics/furnace-age/">Furnace age statistics</a></li>
+      <li><a href="/statistics/air-conditioner-age/">Air conditioner age statistics</a></li>
+      <li><a href="/statistics/">All statistics</a></li>
+    </ul>
+  </section>
+</Base>

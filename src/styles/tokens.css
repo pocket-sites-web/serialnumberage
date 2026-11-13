@@ -99,3 +99,31 @@ tr:last-child td { border-bottom: 0; }
 .shop a { font-weight: 600; }
 .faq { display: grid; gap: var(--space-4); }
 .faq h3 { margin-bottom: 4px; }
+
+/* Statistics pages */
+.updated { font-size: 14px; color: var(--ink-muted); }
+.toc { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); font-size: 15px; }
+.kstats { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
+@media (min-width: 640px) { .kstats { grid-template-columns: 1fr 1fr; } }
+.kstat { background: var(--surface-raised); border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: var(--radius-md); padding: var(--space-4); display: grid; gap: 6px; align-content: start; scroll-margin-top: 16px; }
+.kstat:target, .bars:target { box-shadow: 0 0 0 3px var(--brand); }
+.kstat-value { font: 800 30px/34px var(--font-display); color: var(--brand); }
+.kstat-text { font-size: 16px; line-height: 24px; }
+.copy-link { font-weight: 600; white-space: nowrap; }
+.bars { margin: 0; display: grid; gap: var(--space-2); scroll-margin-top: 16px; border-radius: var(--radius-md); }
+.bars figcaption { font-size: 15px; line-height: 22px; }
+.bar-label { text-transform: none; letter-spacing: 0; font-size: 15px; color: var(--ink); font-weight: 600; white-space: normal; min-width: 96px; }
+@media (max-width: 480px) { th, td { padding: 8px 10px; } .bar-cell { min-width: 110px; } }
+.bar-cell { position: relative; min-width: 140px; width: 60%; }
+.bar { display: block; height: 10px; border-radius: var(--radius-pill); background: var(--brand); opacity: .85; margin-bottom: 4px; }
+.bar-val { font-weight: 600; white-space: nowrap; }
+tr.hl .bar-label, tr.hl .bar-val { color: var(--brand); }
+.nowrap { white-space: nowrap; }
+.state-table { max-height: 520px; overflow: auto; }
+.state-table thead th { position: sticky; top: 0; background: var(--surface-raised); }
+.cite { background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-4); }
+.cite-box { display: grid; gap: 6px; justify-items: start; }
+.cite-text { background: var(--plate); color: var(--plate-ink); padding: 8px 10px; border-radius: var(--radius-sm); word-break: break-word; width: 100%; }
+.btn.small { padding: 6px 12px; font-size: 14px; }
+.methods { font-size: 15px; line-height: 24px; }
+.sources-list { font-size: 15px; }
