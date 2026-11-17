@@ -1,0 +1,27 @@
+---
+// A table that doubles as a horizontal bar chart. Real table markup, so screen readers and scrapers get the numbers.
+interface Row { label: string; value: number; se?: number; extra?: string }
+interface Props { id: string; caption: string; rows: Row[]; valueLabel?: string; extraLabel?: string; max?: number; highlight?: string[] }
+const { id, caption, rows, valueLabel = 'Share', extraLabel, highlight = [] } = Astro.props;
+const max = Astro.props.max ?? Math.max(...rows.map((r) => r.value), 1);
+---
+<figure class="bars" id={id}>
+  <figcaption><b>{caption}</b> <a href={`#${id}`} class="copy-link small" data-copy-anchor={id}>Link</a></figcaption>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">Group</th><th scope="col">{valueLabel}</th>{extraLabel && <th scope="col">{extraLabel}</th>}</tr></thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr class={highlight.includes(r.label) ? 'hl' : undefined}>
+            <th scope="row" class="bar-label">{r.label}</th>
+            <td class="bar-cell">
+              <span class="bar" style={`width:${Math.max(1, (r.value / max) * 100).toFixed(1)}%`}></span>
+              <span class="bar-val">{r.value.toFixed(1)}%{r.se !== undefined && <span class="muted small"> ±{(1.96 * r.se).toFixed(1)}</span>}</span>
+            </td>
+            {extraLabel && <td>{r.extra}</td>}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</figure>

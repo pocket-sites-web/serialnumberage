@@ -1,0 +1,36 @@
+---
+import Base from '../../layouts/Base.astro';
+import { SITE_NAME, SITE_URL } from '../../lib/site';
+import { recs, pct, mil, STATS_UPDATED_LABEL } from '../../lib/stats';
+const pages = [
+  { href: '/statistics/furnace-age/', title: 'Furnace age statistics', blurb: `${pct(recs.furnace.summary['15plus'])} of central furnaces are 15+ years old. By state, region, fuel and renters vs owners, plus carbon monoxide data.` },
+  { href: '/statistics/water-heater-age/', title: 'Water heater age statistics', blurb: `${mil(recs.water.summary['10plus'].homes_m)} homes have a water heater 10+ years old. By state, fuel and tank size, and the growth of tankless.` },
+  { href: '/statistics/air-conditioner-age/', title: 'Air conditioner age statistics', blurb: `${mil(recs.ac.summary['15plus'].homes_m)} homes cool with an AC 15+ years old. By state, region and type, and how many systems date from the R-22 era.` },
+];
+const jsonLd = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${SITE_NAME} statistics`, url: `${SITE_URL}/statistics/` };
+---
+<Base title="Home Heating, Cooling and Water Heater Age Statistics" description="Original statistics on the age of US furnaces, air conditioners and water heaters, by state and region, from our analysis of federal household survey microdata." jsonLd={jsonLd}>
+  <section>
+    <p class="crumbs"><a href="/">Home</a> › Statistics</p>
+    <h1>Home equipment age statistics</h1>
+    <p class="updated">Updated {STATS_UPDATED_LABEL}</p>
+    <p class="lede">{mil(recs.any_15plus.homes_m)} US homes ({pct(recs.any_15plus)}) have at least one of their main heating system, air conditioner or water heater aged 15 years or more. These pages break that down using our own analysis of the federal Residential Energy Consumption Survey's household-level data. Every figure has its own link, sources and a downloadable CSV, and you're welcome to cite them.</p>
+  </section>
+  <section>
+    <ul class="kstats">
+      {pages.map((p) => (
+        <li class="kstat"><h2><a href={p.href}>{p.title}</a></h2><p class="kstat-text">{p.blurb}</p></li>
+      ))}
+    </ul>
+  </section>
+  <section>
+    <h2>Downloads</h2>
+    <ul>
+      <li><a href="/data/furnace-age-by-state.csv" download>Central furnace age by state (CSV)</a></li>
+      <li><a href="/data/heating-equipment-age-by-state.csv" download>All main heating equipment age by state (CSV)</a></li>
+      <li><a href="/data/water-heater-age-by-state.csv" download>Water heater age by state (CSV)</a></li>
+      <li><a href="/data/ac-age-by-state.csv" download>Air conditioner age by state (CSV)</a></li>
+    </ul>
+    <p class="small muted">Data is free to reuse under CC BY 4.0: please credit {SITE_NAME} with a link.</p>
+  </section>
+</Base>

@@ -1,0 +1,174 @@
+---
+import Base from '../../../layouts/Base.astro';
+import KeyStat from '../../../components/stats/KeyStat.astro';
+import Bars from '../../../components/stats/Bars.astro';
+import StateTable from '../../../components/stats/StateTable.astro';
+import Cite from '../../../components/stats/Cite.astro';
+import { SITE_NAME, SITE_URL } from '../../../lib/site';
+import { recs, pct, mil, rowsFrom, distRows, STATS_UPDATED, STATS_UPDATED_LABEL, RECS_CITE, RECS_URL, CPSC_CITE, CPSC_URL } from '../../../lib/stats';
+
+const path = '/statistics/furnace-age/';
+const title = 'Furnace Age Statistics: How Old Are America\'s Furnaces?';
+const description = `${pct(recs.furnace.summary['15plus'])} of US central furnaces are 15+ years old and ${mil(recs.heating.summary['20plus'].homes_m)} homes heat with equipment 20+ years old. State, region, fuel and renter data from EIA microdata.`;
+const H = recs.heating, F = recs.furnace;
+const reg = F.by_region, fuel = F.by_fuel, type = H.by_type, ten = H.by_tenure, hous = H.by_housing;
+const states = Object.entries(F.by_state).filter(([, s]) => s.n_base >= 30 && s['20plus'].ok).sort((a, b) => b[1]['20plus'].pct - a[1]['20plus'].pct);
+const [topSt, topS] = states[0];
+const [lowSt, lowS] = states[states.length - 1];
+// CPSC Table 1, furnaces (incl. boilers), annual estimates 2011-2021
+const cpscFurn = [22, 27, 21, 24, 20, 34, 17, 27, 22, 23, 24];
+const cpscHeat = [49, 46, 43, 64, 37, 50, 41, 63, 73, 63, 63];
+const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+
+const faq = [
+  ['What is the average age of a furnace in the US?', `There is no official average, because the federal survey records age in bands. The middle (median) US central furnace is 10 to 14 years old. ${pct(F.summary['15plus'])} are 15 or more years old and ${pct(F.summary['20plus'])} are 20 or more.`],
+  ['How many US homes have a furnace over 20 years old?', `About ${mil(F.summary['20plus'].homes_m)} homes heat mainly with a central furnace that is 20 or more years old. Counting every kind of main heating equipment, the figure is ${mil(H.summary['20plus'].homes_m)} homes.`],
+  ['Which state has the oldest furnaces?', `Among states with enough survey responses for a reliable estimate, ${topSt} has the highest share of central furnaces aged 20 or more (${pct(topS['20plus'])}). ${lowSt} has the lowest (${pct(lowS['20plus'])}).`],
+  ['Do renters have older furnaces than homeowners?', `Yes. ${pct(ten['Rented']['20plus'])} of renting households heat with main heating equipment that is 20+ years old, compared with ${pct(ten['Owner-occupied']['20plus'])} of owner-occupied homes.`],
+  ['How do I find out how old my furnace is?', 'The manufacture date is usually coded into the serial number on the furnace\'s data plate. Use our free serial number decoder to read it.'],
+];
+
+const jsonLd = [
+  { '@context': 'https://schema.org', '@type': 'Article', headline: title, description, dateModified: STATS_UPDATED, datePublished: STATS_UPDATED, author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL }, publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL }, mainEntityOfPage: `${SITE_URL}${path}` },
+  { '@context': 'https://schema.org', '@type': 'Dataset', name: 'Age of home furnaces and heating equipment by US state', description: 'Share of US homes whose main heating equipment (and central furnace) is under 5, 15+ and 20+ years old, by state, computed from EIA RECS 2020 public microdata with jackknife standard errors.', url: `${SITE_URL}${path}`, creator: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL }, license: 'https://creativecommons.org/licenses/by/4.0/', isAccessibleForFree: true, temporalCoverage: '2020', spatialCoverage: { '@type': 'Place', name: 'United States' }, isBasedOn: RECS_URL, dateModified: STATS_UPDATED,
+    distribution: [
+      { '@type': 'DataDownload', encodingFormat: 'text/csv', contentUrl: `${SITE_URL}/data/furnace-age-by-state.csv` },
+      { '@type': 'DataDownload', encodingFormat: 'text/csv', contentUrl: `${SITE_URL}/data/heating-equipment-age-by-state.csv` },
+    ] },
+  { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
+  { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+    { '@type': 'ListItem', position: 2, name: 'Statistics', item: `${SITE_URL}/statistics/` },
+    { '@type': 'ListItem', position: 3, name: 'Furnace age', item: `${SITE_URL}${path}` } ] },
+];
+---
+<Base title={title} description={description} jsonLd={jsonLd}>
+  <section>
+    <p class="crumbs"><a href="/">Home</a> › <a href="/statistics/">Statistics</a> › Furnace age</p>
+    <h1>Furnace age statistics: how old are America's furnaces?</h1>
+    <p class="updated">Updated {STATS_UPDATED_LABEL} · Original analysis of {(recs.sample_homes).toLocaleString('en-US')} household records from the federal Residential Energy Consumption Survey</p>
+    <p class="lede">Nearly one in three US central furnaces is at least 15 years old, the age at which most start to need replacing. We ran the US Energy Information Administration's household-level survey data to find out where the oldest furnaces are, who has them, and how many homes are relying on heating equipment past its expected life.</p>
+    <nav class="toc" aria-label="On this page">
+      <a href="#key-findings">Key findings</a><a href="#age-distribution">Age breakdown</a><a href="#by-region">By region</a><a href="#by-state">By state</a><a href="#by-fuel">By fuel and type</a><a href="#renters">Renters vs owners</a><a href="#broken-heat">Broken heat</a><a href="#carbon-monoxide">Carbon monoxide</a><a href="#methodology">Methodology</a><a href="#cite">Cite</a>
+    </nav>
+  </section>
+
+  <section id="key-findings">
+    <h2>Key findings</h2>
+    <ul class="kstats">
+      <KeyStat id="furnaces-15-plus" value={pct(F.summary['15plus'])} source="EIA RECS 2020">
+        of US homes heated by a central furnace have one that is <b>15 or more years old</b>, about {mil(F.summary['15plus'].homes_m)} furnaces.
+      </KeyStat>
+      <KeyStat id="homes-heating-20-plus" value={mil(H.summary['20plus'].homes_m)} source="EIA RECS 2020">
+        US homes rely on main heating equipment that is <b>20 or more years old</b> ({pct(H.summary['20plus'])} of heated homes).
+      </KeyStat>
+      <KeyStat id="northeast-oldest" value={pct(reg['Northeast']['15plus'])} source="EIA RECS 2020">
+        of furnaces in the <b>Northeast</b> are 15+ years old, the oldest of any region, against {pct(reg['South']['15plus'])} in the South.
+      </KeyStat>
+      <KeyStat id="oil-furnaces" value={pct(fuel['Fuel oil']['15plus'])} source="EIA RECS 2020">
+        of <b>oil-fired furnaces</b> are 15+ years old, compared with {pct(fuel['Natural gas']['15plus'])} of natural gas furnaces.
+      </KeyStat>
+      <KeyStat id="boilers-oldest" value={pct(type['Boiler (steam or hot water)']['20plus'])} source="EIA RECS 2020">
+        of homes heated by a <b>boiler</b> (steam or hot water radiators) have one 20+ years old, the oldest type of main heating system.
+      </KeyStat>
+      <KeyStat id="renters-older" value={pct(ten['Rented']['20plus'])} source="EIA RECS 2020">
+        of <b>renting households</b> heat with equipment 20+ years old, against {pct(ten['Owner-occupied']['20plus'])} of owner-occupied homes.
+      </KeyStat>
+      <KeyStat id="oldest-state" value={pct(topS['20plus'])} source="EIA RECS 2020">
+        of central furnaces in <b>{topSt}</b> are 20+ years old, the highest of any state (or DC) with a reliable estimate. {lowSt} is lowest at {pct(lowS['20plus'])}.
+      </KeyStat>
+      <KeyStat id="broken-unaffordable" value={mil(H.broke_all.homes_m)} source="EIA RECS 2020">
+        households said they <b>couldn't use their heating</b> at some point in the year because it was broken and they couldn't afford to fix or replace it.
+      </KeyStat>
+      <KeyStat id="heat-pump-shift" value={pct(H.heatpump_by_age['Under 2 years'])} source="EIA RECS 2020">
+        of main heating systems installed in the previous two years were <b>heat pumps</b>, three times the share among systems 20+ years old ({pct(H.heatpump_by_age['20+ years'])}).
+      </KeyStat>
+      <KeyStat id="furnace-co-deaths" value={String(sum(cpscFurn))} source="CPSC, 2011 to 2021">
+        estimated US deaths from <b>carbon monoxide linked to furnaces and boilers</b> in 2011 to 2021, out of {sum(cpscHeat)} linked to all heating systems.
+      </KeyStat>
+    </ul>
+  </section>
+
+  <section id="age-distribution">
+    <h2>How old are US furnaces?</h2>
+    <p>The survey asks each household how old its main heating equipment is, in age bands. The median central furnace falls in the 10 to 14 year band. Most gas furnaces are expected to last <a href="/guides/how-long-does-a-furnace-last/">15 to 20 years</a>, so the bottom two rows are furnaces at or past the end of a typical life.</p>
+    <Bars id="furnace-age-bands" caption="Age of central furnaces in US homes (main heating equipment)" rows={distRows(F.dist)} valueLabel="Share of furnaces" extraLabel="Homes" highlight={['15 to 19 years', '20+ years']} />
+    <p class="small muted">± figures are 95% confidence margins from EIA's replicate weights. Base: {mil(F.summary.base_homes_m)} homes whose main heating is a central furnace.</p>
+  </section>
+
+  <section id="by-region">
+    <h2>Furnace age by region</h2>
+    <p>The Northeast has the oldest heating equipment by a wide margin, and the South the newest.</p>
+    <Bars id="furnace-15-plus-region" caption="Share of central furnaces 15+ years old, by Census region" rows={rowsFrom(reg, '15plus', { sort: true })} valueLabel="15+ years old" />
+    <Bars id="furnace-20-plus-region" caption="Share of central furnaces 20+ years old, by Census region" rows={rowsFrom(reg, '20plus', { sort: true })} valueLabel="20+ years old" />
+  </section>
+
+  <section id="by-state">
+    <h2>Furnace age by state</h2>
+    <p>State figures come from smaller samples, so their margins are wider than the national ones (the CSV includes standard errors). Estimates with a relative standard error over 30% are withheld.</p>
+    <StateTable id="furnace-age-state-table" caption="Central furnace age by state, sorted by share 20+ years old" data={F.by_state} csv="/data/furnace-age-by-state.csv" noun="central furnace" cols={["20plus", "15plus", "under5"]} />
+    <p class="small muted">Also available: <a href="/data/heating-equipment-age-by-state.csv" download>all main heating equipment by state (CSV)</a>.</p>
+  </section>
+
+  <section id="by-fuel">
+    <h2>By fuel and type of heating</h2>
+    <p>Oil heat stands out: around half of oil-fired systems are 15+ years old. Boilers and built-in heaters are the oldest equipment types, while heat pumps and mini-splits skew young because so many have been installed recently.</p>
+    <Bars id="furnace-15-plus-fuel" caption="Share of central furnaces 15+ years old, by fuel" rows={rowsFrom(fuel, '15plus', { sort: true })} valueLabel="15+ years old" />
+    <Bars id="heating-20-plus-type" caption="Share of main heating systems 20+ years old, by equipment type" rows={rowsFrom(type, '20plus', { sort: true, skip: ['Other'] })} valueLabel="20+ years old" />
+    <Bars id="heat-pump-share-by-age" caption="Heat pumps as a share of main heating systems, by system age" rows={distRows(H.heatpump_by_age).map((r) => ({ label: r.label, value: r.value, se: r.se }))} valueLabel="Heat pump share" />
+  </section>
+
+  <section id="renters">
+    <h2>Renters, apartments and older homes</h2>
+    <p>Renters are more likely than owners to live with old heating equipment, and apartments in larger buildings have the oldest systems of any home type. Homes built in the 1990s and 2000s show a bulge of 15 to 20 year old furnaces: many are likely still running the furnace they were built with.</p>
+    <Bars id="heating-20-plus-tenure" caption="Main heating equipment 20+ years old, owners vs renters" rows={rowsFrom(ten, '20plus')} valueLabel="20+ years old" />
+    <Bars id="heating-15-plus-housing" caption="Main heating equipment 15+ years old, by type of home" rows={rowsFrom(hous, '15plus', { sort: true })} valueLabel="15+ years old" />
+    <Bars id="furnace-15-plus-yearbuilt" caption="Central furnaces 15+ years old, by year the home was built" rows={rowsFrom(F.by_yearmade, '15plus')} valueLabel="15+ years old" />
+  </section>
+
+  <section id="broken-heat">
+    <h2>Homes left without working heat</h2>
+    <p>The survey asked whether the household had been unable to use its heating in the past year because the equipment was broken and they couldn't afford to repair or replace it. {mil(H.broke_all.homes_m)} heated homes ({pct(H.broke_all)}) said yes. The rate is lowest for systems 5 to 9 years old and rises for older equipment. It is also high for systems under 2 years old, most likely because many of those households had just replaced a system that failed.</p>
+    <Bars id="broken-heat-by-age" caption="Households unable to use heating because it was broken and unaffordable to fix, by equipment age" rows={distRows(H.broke_by_age).map((r) => ({ label: r.label, value: r.value, se: r.se }))} valueLabel="Share of households" />
+  </section>
+
+  <section id="carbon-monoxide">
+    <h2>Furnaces and carbon monoxide deaths</h2>
+    <p>The Consumer Product Safety Commission estimates deaths from non-fire carbon monoxide poisoning linked to consumer products. Its latest report covers 2011 to 2021:</p>
+    <ul>
+      <li>An estimated <b>{sum(cpscFurn)} deaths</b> were linked to furnaces (including boilers), and <b>{sum(cpscHeat)}</b> to all heating systems.</li>
+      <li>In 2021, furnaces were linked to an estimated <b>24</b> of the 204 consumer-product CO deaths, and heating systems to <b>63</b> (31%).</li>
+      <li><b>56%</b> of CO deaths in 2019 to 2021 happened in November, December, January and February.</li>
+      <li>CPSC's case files often describe detached or blocked vents and flues, cracked heat exchangers, missing filter doors, and products that "were old and apparently not well maintained".</li>
+    </ul>
+    <p class="note">If your furnace is past 15 years, have the heat exchanger and venting checked each autumn and fit a carbon monoxide alarm on every floor. <a href="/furnace-age/">Find your furnace's age from its serial number</a>.</p>
+  </section>
+
+  <section id="faq" class="faq">
+    <h2>Questions</h2>
+    {faq.map(([q, a]) => (<div><h3>{q}</h3><p>{a}</p></div>))}
+  </section>
+
+  <section id="methodology" class="methods">
+    <h2>Methodology</h2>
+    <p>We downloaded the public-use microdata file of the 2020 Residential Energy Consumption Survey (RECS), which the US Energy Information Administration collected from {(recs.sample_homes).toLocaleString('en-US')} households representing {mil(recs.total_homes_m)} occupied US homes. Respondents reported the age of their main heating equipment (variable EQUIPAGE) in six bands. "Central furnace" means homes whose main heating equipment (EQUIPM) is a central warm-air furnace.</p>
+    <p>All estimates are weighted with the survey's final weight (NWEIGHT). Standard errors use EIA's 60 jackknife replicate weights, following the RECS microdata guide. We withhold any estimate based on fewer than 30 sampled homes or with a relative standard error above 30%. As a check, our national counts of heating equipment by age match EIA's own published table HC6.1 to two decimal places.</p>
+    <p>Ages describe equipment at the time of the survey (2020 to early 2021). Ages are reported by households and some answers are imputed by EIA, so treat single-state figures as indicative. EIA has not yet released a newer RECS with equipment age; we will update this page when it does. The analysis script is available on request.</p>
+    <h3>Sources</h3>
+    <ul class="sources-list">
+      <li><a href={RECS_URL}>{RECS_CITE}</a>.</li>
+      <li><a href={CPSC_URL}>{CPSC_CITE}</a> (Table 1 and Summary).</li>
+    </ul>
+  </section>
+
+  <Cite title="Furnace Age Statistics" path={path} />
+
+  <section>
+    <h2>More statistics</h2>
+    <ul class="link-grid">
+      <li><a href="/statistics/water-heater-age/">Water heater age statistics</a></li>
+      <li><a href="/statistics/air-conditioner-age/">Air conditioner age statistics</a></li>
+      <li><a href="/statistics/">All statistics</a></li>
+    </ul>
+  </section>
+</Base>

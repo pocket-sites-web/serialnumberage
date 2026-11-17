@@ -1,0 +1,27 @@
+---
+import type { Shares } from '../../lib/stats';
+type Key = '10plus' | '15plus' | '20plus' | 'under5';
+interface Props { id: string; caption: string; data: Record<string, Shares>; csv: string; noun: string; sortKey?: Key; cols?: Key[] }
+const { id, caption, data, csv, noun, sortKey = '20plus', cols = ['20plus', '15plus', '10plus', 'under5'] } = Astro.props;
+const LABEL: Record<Key, string> = { '10plus': '10+ years', '15plus': '15+ years', '20plus': '20+ years', under5: 'Under 5 years' };
+const ok = (s: Shares) => s.n_base >= 30;
+const cell = (s: Shares, c: Key) => (s[c].ok ? `${s[c].pct.toFixed(1)}%` : '–');
+const rows = Object.entries(data).sort((a, b) => Number(ok(b[1]) && b[1][sortKey].ok) - Number(ok(a[1]) && a[1][sortKey].ok) || b[1][sortKey].pct - a[1][sortKey].pct);
+const k = (m: number) => `${Math.round(m * 1000).toLocaleString('en-US')}k`;
+---
+<figure class="bars" id={id}>
+  <figcaption><b>{caption}</b> <a href={`#${id}`} class="copy-link small" data-copy-anchor={id}>Link</a> · <a href={csv} download>Download CSV</a></figcaption>
+  <div class="table-wrap state-table">
+    <table>
+      <thead><tr><th scope="col">State</th>{cols.map((c) => <th scope="col">{LABEL[c]}</th>)}<th scope="col">Homes with a {noun}</th></tr></thead>
+      <tbody>
+        {rows.map(([st, s]) => ok(s) ? (
+          <tr><th scope="row" class="bar-label">{st}</th>{cols.map((c) => <td>{cell(s, c)}</td>)}<td class="nowrap">{k(s.base_homes_m)}</td></tr>
+        ) : (
+          <tr class="muted"><th scope="row" class="bar-label">{st}</th><td colspan={cols.length}>Sample too small for a reliable estimate</td><td class="nowrap">{k(s.base_homes_m)}</td></tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted">– = estimate withheld (relative standard error above 30%). States are sorted by the first column; rows with a withheld value in that column are listed last.</p>
+</figure>
